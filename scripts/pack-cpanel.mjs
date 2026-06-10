@@ -13,7 +13,7 @@ mkdirSync(join(out, 'data'), { recursive: true })
 cpSync(join(root, 'dist'), out, { recursive: true })
 cpSync(join(root, 'php-api', 'index.php'), join(out, 'api', 'index.php'))
 cpSync(join(root, 'php-api', 'db.php'), join(out, 'api', 'db.php'))
-cpSync(join(root, 'deploy', 'data', '.htaccess'), join(out, 'data', '.htaccess'))
+cpSync(join(root, 'php-api', 'data.htaccess'), join(out, 'data', '.htaccess'))
 
 writeFileSync(
   join(out, 'api', '.htaccess'),
