@@ -1,10 +1,14 @@
-import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SUBPATH = process.env.DEPLOY_PATH ?? 'tenis'
+const FOLDER = process.env.DEPLOY_PATH ?? 'tenis'
+const URL_PATH = process.env.URL_PATH ?? (FOLDER === 'root' ? '' : FOLDER)
+const urlBase = URL_PATH ? `/${URL_PATH}` : ''
+const rewriteBase = urlBase ? `${urlBase}/` : '/'
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const out = join(root, 'deploy', SUBPATH)
+const out = join(root, 'deploy', FOLDER)
 
 rmSync(out, { recursive: true, force: true })
 mkdirSync(join(out, 'api'), { recursive: true })
@@ -22,12 +26,23 @@ cpSync(join(root, 'php-api', 'uploads.htaccess'), join(out, 'uploads', '.htacces
 writeFileSync(
   join(out, 'api', '.htaccess'),
   `RewriteEngine On
-RewriteBase /${SUBPATH}/api/
+RewriteBase ${rewriteBase}api/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [L]
 `,
 )
 
+const rootHtaccess = readFileSync(join(root, 'php-api', 'root.htaccess'), 'utf8').replaceAll(
+  '/__BASE__/',
+  rewriteBase,
+)
+writeFileSync(join(out, '.htaccess'), rootHtaccess)
+
 console.log('Ready to upload:', out)
-console.log(`Upload everything inside deploy/${SUBPATH}/ to public_html/${SUBPATH}/`)
-console.log(`Your app URL: https://yourdomain.com/${SUBPATH}`)
+if (urlBase) {
+  console.log(`Upload everything inside deploy/${FOLDER}/ to your subdomain folder${urlBase}/`)
+  console.log(`Example URL: https://matchpoint.web-tribe.si${urlBase}`)
+} else {
+  console.log(`Upload everything inside deploy/${FOLDER}/ to your subdomain root folder`)
+  console.log('Example URL: https://matchpoint.web-tribe.si/')
+}

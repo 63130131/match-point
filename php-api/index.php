@@ -280,9 +280,17 @@ try {
     }
 
     if (preg_match('#^/matches/([^/]+)$#', $path, $m) && $method === 'DELETE') {
-        require_auth();
+        $user = require_auth();
+        $id = $m[1];
+        $stmt = db()->prepare('SELECT player1_id AS player1Id, player2_id AS player2Id FROM matches WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $match = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+        if (!$match) {
+            respond(404, ['error' => 'Match not found']);
+        }
+        assert_can_delete_match($user, $match['player1Id'], $match['player2Id']);
         $stmt = db()->prepare('DELETE FROM matches WHERE id = :id');
-        $stmt->bindValue(':id', $m[1], SQLITE3_TEXT);
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
         $stmt->execute();
         respond(204);
     }

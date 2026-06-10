@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import db from './db.js'
 import {
   assertAdmin,
+  assertCanDeleteMatch,
   assertOwnsPlayer,
   authResponse,
   listUnclaimedPlayers,
@@ -323,7 +324,16 @@ app.post('/api/matches', (req, res) => {
 })
 
 app.delete('/api/matches/:id', (req, res) => {
-  if (!requireAuth(req, res)) return
+  const user = requireAuth(req, res)
+  if (!user) return
+  const match = db
+    .prepare('SELECT player1_id AS player1Id, player2_id AS player2Id FROM matches WHERE id = ?')
+    .get(req.params.id) as { player1Id: string; player2Id: string } | undefined
+  if (!match) {
+    res.status(404).json({ error: 'Match not found' })
+    return
+  }
+  if (!assertCanDeleteMatch(user, match.player1Id, match.player2Id, res)) return
   db.prepare('DELETE FROM matches WHERE id = ?').run(req.params.id)
   res.status(204).end()
 })

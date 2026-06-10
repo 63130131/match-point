@@ -8,9 +8,22 @@ function load_config(): void
     }
 }
 
+function config_value(string $key, string $default = ''): string
+{
+    $value = getenv($key);
+    if ($value !== false && $value !== '') {
+        return trim($value);
+    }
+    $fromFile = $GLOBALS['APP_CONFIG'][$key] ?? null;
+    if (is_string($fromFile) && $fromFile !== '') {
+        return trim($fromFile);
+    }
+    return $default;
+}
+
 function jwt_secret(): string
 {
-    return getenv('JWT_SECRET') ?: 'dev-secret-change-me';
+    return config_value('JWT_SECRET', 'dev-secret-change-me');
 }
 
 function base64url_encode(string $data): string
@@ -76,7 +89,7 @@ function verify_password(string $password, string $hash): bool
 
 function admin_username(): string
 {
-    return trim(getenv('ADMIN_USERNAME') ?: '');
+    return config_value('ADMIN_USERNAME');
 }
 
 function is_configured_admin(string $username): bool
@@ -137,7 +150,7 @@ function require_auth(): array
     if (!$user) {
         respond(401, ['error' => 'Invalid session']);
     }
-    return $user;
+    return promote_admin_if_configured($userId, $user['username']) ?? $user;
 }
 
 function can_edit_player(array $user, string $playerId): bool
@@ -163,6 +176,25 @@ function assert_admin(array $user): void
 {
     if (empty($user['isAdmin'])) {
         respond(403, ['error' => 'Only the admin can remove players']);
+    }
+}
+
+function can_delete_match(array $user, string $player1Id, string $player2Id): bool
+{
+    if (!empty($user['isAdmin'])) {
+        return true;
+    }
+    $playerId = $user['playerId'] ?? null;
+    if (!$playerId) {
+        return false;
+    }
+    return $playerId === $player1Id || $playerId === $player2Id;
+}
+
+function assert_can_delete_match(array $user, string $player1Id, string $player2Id): void
+{
+    if (!can_delete_match($user, $player1Id, $player2Id)) {
+        respond(403, ['error' => 'You can only delete matches you played in']);
     }
 }
 

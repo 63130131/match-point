@@ -57,8 +57,9 @@ export function StandingsTable() {
               <th>Player</th>
               <th>P</th>
               <th>W</th>
+              <th>T</th>
               <th>L</th>
-              <th>Win%</th>
+              <th>Pts</th>
               <th>Sets</th>
               <th>Games</th>
             </tr>
@@ -86,9 +87,10 @@ export function StandingsTable() {
                 </td>
                 <td>{row.played}</td>
                 <td className="standings-table__wins">{row.wins}</td>
+                <td>{row.draws}</td>
                 <td className="standings-table__losses">{row.losses}</td>
                 <td>
-                  <span className="win-pill">{row.winRate}%</span>
+                  <span className="win-pill">{row.points}</span>
                 </td>
                 <td className="standings-table__mono">
                   {row.setsWon}-{row.setsLost}
@@ -101,7 +103,7 @@ export function StandingsTable() {
           </tbody>
         </table>
       </div>
-      <p className="table-hint">Ranked by wins → set diff → game diff</p>
+      <p className="table-hint">Ranked by points (win = 1, tie = 1 each) → wins → set diff → game diff</p>
     </div>
   )
 }

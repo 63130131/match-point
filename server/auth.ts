@@ -1,4 +1,5 @@
-import { createHmac, scryptSync, timingSafeEqual, randomBytes } from 'node:crypto'
+import { createHmac, scryptSync, timingSafeEqual } from 'node:crypto'
+import bcrypt from 'bcryptjs'
 import type { Request, Response } from 'express'
 import db from './db.js'
 import { formatPlayer, getPlayer } from './players.js'
@@ -81,12 +82,10 @@ function bearerToken(req: Request): string | undefined {
 }
 
 function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
-  return `${salt}:${hash}`
+  return bcrypt.hashSync(password, 10)
 }
 
-function verifyPassword(password: string, stored: string): boolean {
+function verifyLegacyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(':')
   if (!salt || !hash) return false
   const attempt = scryptSync(password, salt, 64).toString('hex')
@@ -95,6 +94,13 @@ function verifyPassword(password: string, stored: string): boolean {
   } catch {
     return false
   }
+}
+
+function verifyPassword(password: string, stored: string): boolean {
+  if (stored.startsWith('$2')) {
+    return bcrypt.compareSync(password, stored)
+  }
+  return verifyLegacyPassword(password, stored)
 }
 
 export function getUser(id: string) {
@@ -225,7 +231,7 @@ export function requireAuth(req: Request, res: Response): UserRow | null {
     res.status(401).json({ error: 'Invalid session' })
     return null
   }
-  return user
+  return promoteAdminIfConfigured(userId, user.username) ?? user
 }
 
 export function canEditPlayer(user: UserRow, playerId: string): boolean {
@@ -246,4 +252,25 @@ export function assertAdmin(user: UserRow, res: Response): boolean {
     return false
   }
   return true
+}
+
+export function canDeleteMatch(
+  user: UserRow,
+  player1Id: string,
+  player2Id: string,
+): boolean {
+  if (user.isAdmin) return true
+  if (!user.playerId) return false
+  return user.playerId === player1Id || user.playerId === player2Id
+}
+
+export function assertCanDeleteMatch(
+  user: UserRow,
+  player1Id: string,
+  player2Id: string,
+  res: Response,
+): boolean {
+  if (canDeleteMatch(user, player1Id, player2Id)) return true
+  res.status(403).json({ error: 'You can only delete matches you played in' })
+  return false
 }

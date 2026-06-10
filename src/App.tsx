@@ -5,26 +5,30 @@ import { SeasonBar } from './components/SeasonBar'
 import { StandingsTable } from './components/StandingsTable'
 import { MatchForm } from './components/MatchForm'
 import { MatchHistory } from './components/MatchHistory'
+import { AdminSettings } from './components/AdminSettings'
 import { PlayerManager } from './components/PlayerManager'
 import { LoginScreen } from './components/LoginScreen'
 import { LeagueLogo } from './components/LeagueLogo'
 import { PlayerAvatar } from './components/PlayerAvatar'
-import { BallIcon, ListIcon, TrophyIcon, UsersIcon } from './components/Icons'
+import { BallIcon, ListIcon, SettingsIcon, TrophyIcon, UsersIcon } from './components/Icons'
 import { BrandingProvider } from './context/BrandingContext'
 
-type Tab = 'standings' | 'log' | 'history' | 'players'
+type Tab = 'standings' | 'log' | 'history' | 'players' | 'settings'
 
-const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
+const baseTabs: { id: Tab; label: string; icon: ReactNode; adminOnly?: boolean }[] = [
   { id: 'standings', label: 'Standings', icon: <TrophyIcon /> },
   { id: 'log', label: 'Log Match', icon: <BallIcon /> },
   { id: 'history', label: 'History', icon: <ListIcon /> },
   { id: 'players', label: 'Players', icon: <UsersIcon /> },
+  { id: 'settings', label: 'Settings', icon: <SettingsIcon />, adminOnly: true },
 ]
 
 function AppContent() {
   const [tab, setTab] = useState<Tab>('standings')
   const { loading, error, refresh } = useApp()
-  const { player, user, logout } = useAuth()
+  const { player, user, logout, refreshSession } = useAuth()
+  const isAdmin = Boolean(user?.isAdmin)
+  const tabs = baseTabs.filter((t) => !t.adminOnly || isAdmin)
 
   if (loading) {
     return (
@@ -66,6 +70,7 @@ function AppContent() {
             <div className="header__user">
               <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size="sm" />
               <span className="header__user-name">{player.name}</span>
+              {isAdmin && <span className="pill pill--accent">Admin</span>}
               <button type="button" className="btn btn--ghost btn--sm" onClick={logout}>
                 Sign out
               </button>
@@ -94,9 +99,15 @@ function AppContent() {
         {tab === 'log' && <MatchForm />}
         {tab === 'history' && <MatchHistory />}
         {tab === 'players' && <PlayerManager />}
+        {tab === 'settings' && isAdmin && <AdminSettings />}
       </main>
 
-      <footer className="footer">Signed in as {user?.username}</footer>
+      <footer className="footer">
+        Signed in as {user?.username}
+        <button type="button" className="btn btn--ghost btn--sm footer__refresh" onClick={() => refreshSession()}>
+          Refresh session
+        </button>
+      </footer>
     </div>
   )
 }

@@ -1,5 +1,12 @@
 import type { Match, PlayerStanding, Player, SetScore } from '../types'
 
+export type SetFormat = 'standard' | 'long'
+
+export const SET_FORMAT_MAX_GAMES: Record<SetFormat, number> = {
+  standard: 7,
+  long: 21,
+}
+
 export function getMatchWinner(match: Match): string | null {
   let p1Sets = 0
   let p2Sets = 0
@@ -11,8 +18,26 @@ export function getMatchWinner(match: Match): string | null {
   return p1Sets > p2Sets ? match.player1Id : match.player2Id
 }
 
+export function isMatchTie(match: Match): boolean {
+  return getMatchWinner(match) === null
+}
+
 export function formatScore(sets: SetScore[]): string {
   return sets.map((s) => `${s.player1Games}-${s.player2Games}`).join(', ')
+}
+
+function applySetStats(p1Stats: PlayerStanding, p2Stats: PlayerStanding, set: SetScore): void {
+  const p1Won = set.player1Games > set.player2Games
+  const p2Won = set.player2Games > set.player1Games
+
+  p1Stats.setsWon += p1Won ? 1 : 0
+  p1Stats.setsLost += p2Won ? 1 : 0
+  p1Stats.gamesWon += set.player1Games
+  p1Stats.gamesLost += set.player2Games
+  p2Stats.setsWon += p2Won ? 1 : 0
+  p2Stats.setsLost += p1Won ? 1 : 0
+  p2Stats.gamesWon += set.player2Games
+  p2Stats.gamesLost += set.player1Games
 }
 
 export function computeStandings(
@@ -27,18 +52,35 @@ export function computeStandings(
       name: player.name,
       played: 0,
       wins: 0,
+      draws: 0,
       losses: 0,
+      points: 0,
       setsWon: 0,
       setsLost: 0,
       gamesWon: 0,
       gamesLost: 0,
-      winRate: 0,
     })
   }
 
   for (const match of matches) {
+    const p1Stats = stats.get(match.player1Id)
+    const p2Stats = stats.get(match.player2Id)
+    if (!p1Stats || !p2Stats) continue
+
     const winner = getMatchWinner(match)
-    if (!winner) continue
+
+    if (!winner) {
+      p1Stats.played++
+      p2Stats.played++
+      p1Stats.draws++
+      p2Stats.draws++
+      p1Stats.points++
+      p2Stats.points++
+      for (const set of match.sets) {
+        applySetStats(p1Stats, p2Stats, set)
+      }
+      continue
+    }
 
     const loser = winner === match.player1Id ? match.player2Id : match.player1Id
     const winnerStats = stats.get(winner)
@@ -47,43 +89,19 @@ export function computeStandings(
 
     winnerStats.played++
     winnerStats.wins++
+    winnerStats.points++
     loserStats.played++
     loserStats.losses++
 
     for (const set of match.sets) {
-      const p1Won = set.player1Games > set.player2Games
-      const p2Won = set.player2Games > set.player1Games
-
-      if (match.player1Id === winner) {
-        winnerStats.setsWon += p1Won ? 1 : 0
-        winnerStats.setsLost += p2Won ? 1 : 0
-        winnerStats.gamesWon += set.player1Games
-        winnerStats.gamesLost += set.player2Games
-        loserStats.setsWon += p2Won ? 1 : 0
-        loserStats.setsLost += p1Won ? 1 : 0
-        loserStats.gamesWon += set.player2Games
-        loserStats.gamesLost += set.player1Games
-      } else {
-        winnerStats.setsWon += p2Won ? 1 : 0
-        winnerStats.setsLost += p1Won ? 1 : 0
-        winnerStats.gamesWon += set.player2Games
-        winnerStats.gamesLost += set.player1Games
-        loserStats.setsWon += p1Won ? 1 : 0
-        loserStats.setsLost += p2Won ? 1 : 0
-        loserStats.gamesWon += set.player1Games
-        loserStats.gamesLost += set.player2Games
-      }
+      applySetStats(p1Stats, p2Stats, set)
     }
   }
 
-  const standings = Array.from(stats.values())
-    .filter((s) => s.played > 0)
-    .map((s) => ({
-      ...s,
-      winRate: s.played > 0 ? Math.round((s.wins / s.played) * 100) : 0,
-    }))
+  const standings = Array.from(stats.values()).filter((s) => s.played > 0)
 
   standings.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
     if (b.wins !== a.wins) return b.wins - a.wins
     const aSetDiff = a.setsWon - a.setsLost
     const bSetDiff = b.setsWon - b.setsLost
@@ -98,14 +116,9 @@ export function computeStandings(
 
 export function validateSets(sets: SetScore[]): string | null {
   if (sets.length === 0) return 'Add at least one set'
-  let p1Sets = 0
-  let p2Sets = 0
   for (const set of sets) {
     if (set.player1Games < 0 || set.player2Games < 0) return 'Scores cannot be negative'
     if (set.player1Games === set.player2Games) return 'Each set must have a winner'
-    if (set.player1Games > set.player2Games) p1Sets++
-    else p2Sets++
   }
-  if (p1Sets === p2Sets) return 'Match must have an overall winner'
   return null
 }

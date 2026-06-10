@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import type { Player } from '../types'
 import { PlayerAvatar } from './PlayerAvatar'
-import { LogoSettings } from './LogoSettings'
 import { PlayerEditModal } from './PlayerEditModal'
 
 export function PlayerManager() {
@@ -45,14 +44,12 @@ export function PlayerManager() {
           <h2 className="section-title">Players</h2>
           <p className="section-subtitle">
             {isAdmin
-              ? 'As admin you can edit or remove other players. Everyone else can only edit their own profile.'
+              ? 'As admin you can edit or remove other players. Change the league logo in Settings.'
               : 'You can edit your own profile below. Only the admin can change other players.'}
           </p>
         </div>
         {data.players.length > 0 && <span className="pill">{data.players.length} total</span>}
       </div>
-
-      {isAdmin && <LogoSettings />}
 
       {myProfile && (
         <div className="card my-profile">

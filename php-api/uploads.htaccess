@@ -1,4 +1,4 @@
 # Allow image files only
-<FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg)$">
     Require all granted
 </FilesMatch>

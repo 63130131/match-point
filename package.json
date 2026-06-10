@@ -10,11 +10,14 @@
     "build": "tsc -b && vite build",
     "build:cpanel": "tsc -b && VITE_BASE=/tenis/ VITE_API_BASE=/tenis/api npm run build",
     "pack:cpanel": "npm run build:cpanel && node scripts/pack-cpanel.mjs",
+    "build:matchpoint": "tsc -b && VITE_BASE=/ VITE_API_BASE=/api npm run build",
+    "pack:matchpoint": "npm run build:matchpoint && DEPLOY_PATH=root URL_PATH= node scripts/pack-cpanel.mjs",
     "start": "NODE_ENV=production tsx server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "multer": "^1.4.5-lts.2",
@@ -23,20 +26,21 @@
     "tsx": "^4.19.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/multer": "^1.4.12",
-    "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.0",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "typescript": "~6.0.2",
-    "concurrently": "^9.2.0",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
   }

@@ -95,7 +95,7 @@ function migrate_auth_tables(SQLite3 $db): void
         $db->exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
     }
 
-    $adminUsername = getenv('ADMIN_USERNAME') ?: '';
+    $adminUsername = trim(getenv('ADMIN_USERNAME') ?: ($GLOBALS['APP_CONFIG']['ADMIN_USERNAME'] ?? ''));
     if ($adminUsername !== '') {
         $stmt = $db->prepare('UPDATE users SET is_admin = 1 WHERE username = :username COLLATE NOCASE');
         $stmt->bindValue(':username', $adminUsername, SQLITE3_TEXT);

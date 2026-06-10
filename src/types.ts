@@ -52,10 +52,11 @@ export interface PlayerStanding {
   name: string
   played: number
   wins: number
+  draws: number
   losses: number
+  points: number
   setsWon: number
   setsLost: number
   gamesWon: number
   gamesLost: number
-  winRate: number
 }

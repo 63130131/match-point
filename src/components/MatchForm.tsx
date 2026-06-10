@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { validateSets } from '../utils/match'
+import { SET_FORMAT_MAX_GAMES, validateSets, type SetFormat } from '../utils/match'
 import type { SetScore } from '../types'
 import { BallIcon, PlusIcon, UsersIcon } from './Icons'
 
@@ -10,7 +10,9 @@ export function MatchForm() {
   const { data, activeSeason, addMatch, getPlayer } = useApp()
   const [player1Id, setPlayer1Id] = useState('')
   const [player2Id, setPlayer2Id] = useState('')
+  const [setFormat, setSetFormat] = useState<SetFormat>('standard')
   const [sets, setSets] = useState<SetScore[]>([emptySet(), emptySet(), emptySet()])
+  const maxGames = SET_FORMAT_MAX_GAMES[setFormat]
   const [playedAt, setPlayedAt] = useState(() => new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,6 +21,17 @@ export function MatchForm() {
   const updateSet = (index: number, field: keyof SetScore, value: number) => {
     setSets((prev) =>
       prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
+    )
+  }
+
+  const changeSetFormat = (format: SetFormat) => {
+    const max = SET_FORMAT_MAX_GAMES[format]
+    setSetFormat(format)
+    setSets((prev) =>
+      prev.map((s) => ({
+        player1Games: Math.min(max, s.player1Games),
+        player2Games: Math.min(max, s.player2Games),
+      })),
     )
   }
 
@@ -131,7 +144,27 @@ export function MatchForm() {
         </div>
 
         <div className="form-group">
-          <label>Sets (games per set)</label>
+          <label>Set format</label>
+          <div className="score-format-tabs" role="group" aria-label="Set format">
+            <button
+              type="button"
+              className={`score-format-tabs__btn ${setFormat === 'standard' ? 'score-format-tabs__btn--active' : ''}`}
+              onClick={() => changeSetFormat('standard')}
+            >
+              Standard (to 7)
+            </button>
+            <button
+              type="button"
+              className={`score-format-tabs__btn ${setFormat === 'long' ? 'score-format-tabs__btn--active' : ''}`}
+              onClick={() => changeSetFormat('long')}
+            >
+              Long (to 21)
+            </button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Sets (games per set, max {maxGames})</label>
           <div className="sets-grid">
             {sets.map((set, i) => (
               <div key={i} className="set-row">
@@ -139,11 +172,16 @@ export function MatchForm() {
                 <input
                   type="number"
                   min={0}
-                  max={7}
+                  max={maxGames}
+                  className="set-row__score"
                   value={set.player1Games || ''}
                   placeholder="0"
                   onChange={(e) =>
-                    updateSet(i, 'player1Games', parseInt(e.target.value) || 0)
+                    updateSet(
+                      i,
+                      'player1Games',
+                      Math.min(maxGames, Math.max(0, parseInt(e.target.value) || 0)),
+                    )
                   }
                   aria-label={`${p1Name} games set ${i + 1}`}
                 />
@@ -151,11 +189,16 @@ export function MatchForm() {
                 <input
                   type="number"
                   min={0}
-                  max={7}
+                  max={maxGames}
+                  className="set-row__score"
                   value={set.player2Games || ''}
                   placeholder="0"
                   onChange={(e) =>
-                    updateSet(i, 'player2Games', parseInt(e.target.value) || 0)
+                    updateSet(
+                      i,
+                      'player2Games',
+                      Math.min(maxGames, Math.max(0, parseInt(e.target.value) || 0)),
+                    )
                   }
                   aria-label={`${p2Name} games set ${i + 1}`}
                 />
