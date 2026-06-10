@@ -1,0 +1,18 @@
+# Deploy on Render: https://render.com
+# New → Blueprint → connect this repo
+services:
+  - type: web
+    name: tennis-league
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: tennis-data
+      mountPath: /var/data
+      sizeGB: 1
