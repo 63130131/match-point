@@ -57,6 +57,7 @@ function migrate_auth_tables(SQLite3 $db): void
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             player_id TEXT,
+            is_admin INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
         );
     ');
@@ -86,9 +87,19 @@ function migrate_auth_tables(SQLite3 $db): void
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 player_id TEXT,
+                is_admin INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL
             );
         ');
+    } elseif (!in_array('is_admin', $userCols, true)) {
+        $db->exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+    }
+
+    $adminUsername = getenv('ADMIN_USERNAME') ?: '';
+    if ($adminUsername !== '') {
+        $stmt = $db->prepare('UPDATE users SET is_admin = 1 WHERE username = :username COLLATE NOCASE');
+        $stmt->bindValue(':username', $adminUsername, SQLITE3_TEXT);
+        $stmt->execute();
     }
 }
 
@@ -159,6 +170,39 @@ function delete_player_photo_file(?string $photo): void
     if (is_file($path)) {
         unlink($path);
     }
+}
+
+function delete_player_completely(string $playerId): bool
+{
+    $db = db();
+    $stmt = $db->prepare('SELECT photo, user_id FROM players WHERE id = :id');
+    $stmt->bindValue(':id', $playerId, SQLITE3_TEXT);
+    $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    if (!$row) {
+        return false;
+    }
+
+    delete_player_photo_file($row['photo'] ?? null);
+
+    $stmt = $db->prepare('DELETE FROM matches WHERE player1_id = :id OR player2_id = :id');
+    $stmt->bindValue(':id', $playerId, SQLITE3_TEXT);
+    $stmt->execute();
+
+    if (!empty($row['user_id'])) {
+        $stmt = $db->prepare('DELETE FROM users WHERE id = :id');
+        $stmt->bindValue(':id', $row['user_id'], SQLITE3_TEXT);
+        $stmt->execute();
+    }
+
+    $stmt = $db->prepare('DELETE FROM users WHERE player_id = :id');
+    $stmt->bindValue(':id', $playerId, SQLITE3_TEXT);
+    $stmt->execute();
+
+    $stmt = $db->prepare('DELETE FROM players WHERE id = :id');
+    $stmt->bindValue(':id', $playerId, SQLITE3_TEXT);
+    $stmt->execute();
+
+    return true;
 }
 
 function uid(): string

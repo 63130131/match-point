@@ -1,3 +1,4 @@
+import './load-env.js'
 import { DatabaseSync } from 'node:sqlite'
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -67,8 +68,19 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     player_id TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
   );
 `)
+
+const userColsAfter = db.prepare('PRAGMA table_info(users)').all() as { name: string }[]
+if (!userColsAfter.some((c) => c.name === 'is_admin')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0')
+}
+
+const adminUsername = process.env.ADMIN_USERNAME?.trim()
+if (adminUsername) {
+  db.prepare('UPDATE users SET is_admin = 1 WHERE LOWER(username) = LOWER(?)').run(adminUsername)
+}
 
 export default db

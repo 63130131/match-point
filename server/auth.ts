@@ -9,7 +9,35 @@ export interface UserRow {
   id: string
   username: string
   playerId: string | null
+  isAdmin: boolean
   createdAt: string
+}
+
+function isConfiguredAdmin(username: string): boolean {
+  const admin = process.env.ADMIN_USERNAME?.trim()
+  return Boolean(admin && admin.toLowerCase() === username.toLowerCase())
+}
+
+function formatUser(row: {
+  id: string
+  username: string
+  playerId: string | null
+  isAdmin: number | boolean
+  createdAt: string
+}): UserRow {
+  return {
+    id: row.id,
+    username: row.username,
+    playerId: row.playerId,
+    isAdmin: Boolean(row.isAdmin),
+    createdAt: row.createdAt,
+  }
+}
+
+function promoteAdminIfConfigured(userId: string, username: string): UserRow | null {
+  if (!isConfiguredAdmin(username)) return getUser(userId)
+  db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(userId)
+  return getUser(userId)
 }
 
 function base64url(data: string | Buffer): string {
@@ -72,10 +100,12 @@ function verifyPassword(password: string, stored: string): boolean {
 export function getUser(id: string) {
   const row = db
     .prepare(
-      'SELECT id, username, player_id AS playerId, created_at AS createdAt FROM users WHERE id = ?',
+      'SELECT id, username, player_id AS playerId, is_admin AS isAdmin, created_at AS createdAt FROM users WHERE id = ?',
     )
-    .get(id) as UserRow | undefined
-  return row ?? null
+    .get(id) as
+    | { id: string; username: string; playerId: string | null; isAdmin: number; createdAt: string }
+    | undefined
+  return row ? formatUser(row) : null
 }
 
 function getUserWithHash(username: string) {
@@ -119,7 +149,7 @@ export function loginUser(username: string, password: string, res: Response): Us
     res.status(401).json({ error: 'Wrong username or password' })
     return null
   }
-  return getUser(row.id)
+  return promoteAdminIfConfigured(row.id, row.username)
 }
 
 export function registerUser(
@@ -165,9 +195,10 @@ export function registerUser(
     )
   }
 
+  const isAdmin = isConfiguredAdmin(username) ? 1 : 0
   db.prepare(
-    'INSERT INTO users (id, username, password_hash, player_id, created_at) VALUES (?, ?, ?, ?, ?)',
-  ).run(userId, username, hashPassword(password), linkedPlayerId, new Date().toISOString())
+    'INSERT INTO users (id, username, password_hash, player_id, is_admin, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+  ).run(userId, username, hashPassword(password), linkedPlayerId, isAdmin, new Date().toISOString())
 
   return getUser(userId)
 }
@@ -197,9 +228,21 @@ export function requireAuth(req: Request, res: Response): UserRow | null {
   return user
 }
 
+export function canEditPlayer(user: UserRow, playerId: string): boolean {
+  if (user.playerId === playerId) return true
+  return user.isAdmin
+}
+
 export function assertOwnsPlayer(user: UserRow, playerId: string, res: Response): boolean {
-  if (user.playerId !== playerId) {
-    res.status(403).json({ error: 'You can only edit your own profile' })
+  if (user.playerId === playerId) return true
+  if (user.isAdmin) return true
+  res.status(403).json({ error: 'Only the admin can change other players' })
+  return false
+}
+
+export function assertAdmin(user: UserRow, res: Response): boolean {
+  if (!user.isAdmin) {
+    res.status(403).json({ error: 'Only the admin can remove players' })
     return false
   }
   return true

@@ -1,3 +1,4 @@
+import './load-env.js'
 import cors from 'cors'
 import express from 'express'
 import multer from 'multer'
@@ -6,6 +7,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import db from './db.js'
 import {
+  assertAdmin,
   assertOwnsPlayer,
   authResponse,
   listUnclaimedPlayers,
@@ -14,6 +16,7 @@ import {
   requireAuth,
 } from './auth.js'
 import {
+  deletePlayerCompletely,
   deletePlayerPhotoFile,
   formatPlayer,
   getPlayer,
@@ -195,12 +198,15 @@ app.delete('/api/players/:id/photo', (req, res) => {
 app.delete('/api/players/:id', (req, res) => {
   const user = requireAuth(req, res)
   if (!user) return
-  if (!assertOwnsPlayer(user, req.params.id, res)) return
-  const row = db.prepare('SELECT photo FROM players WHERE id = ?').get(req.params.id) as
-    | { photo: string | null }
-    | undefined
-  deletePlayerPhotoFile(row?.photo)
-  db.prepare('DELETE FROM players WHERE id = ?').run(req.params.id)
+  if (!assertAdmin(user, res)) return
+  if (user.playerId === req.params.id) {
+    res.status(403).json({ error: 'You cannot delete your own account' })
+    return
+  }
+  if (!deletePlayerCompletely(req.params.id)) {
+    res.status(404).json({ error: 'Player not found' })
+    return
+  }
   res.status(204).end()
 })
 

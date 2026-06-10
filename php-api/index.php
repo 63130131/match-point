@@ -147,14 +147,13 @@ try {
     if (preg_match('#^/players/([^/]+)$#', $path, $m) && $method === 'DELETE') {
         $user = require_auth();
         $id = $m[1];
-        assert_owns_player($user, $id);
-        $stmt = db()->prepare('SELECT photo FROM players WHERE id = :id');
-        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
-        $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
-        delete_player_photo_file($row['photo'] ?? null);
-        $stmt = db()->prepare('DELETE FROM players WHERE id = :id');
-        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
-        $stmt->execute();
+        assert_admin($user);
+        if (($user['playerId'] ?? null) === $id) {
+            respond(403, ['error' => 'You cannot delete your own account']);
+        }
+        if (!delete_player_completely($id)) {
+            respond(404, ['error' => 'Player not found']);
+        }
         respond(204);
     }
 

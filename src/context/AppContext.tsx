@@ -19,6 +19,7 @@ interface AppContextValue {
   updatePlayer: (id: string, name: string) => Promise<void>
   uploadPlayerPhoto: (id: string, file: File) => Promise<void>
   removePlayerPhoto: (id: string) => Promise<void>
+  deletePlayer: (id: string) => Promise<void>
   addSeason: (name: string) => Promise<void>
   setActiveSeason: (id: string) => Promise<void>
   removeSeason: (id: string) => Promise<void>
@@ -112,6 +113,14 @@ export function AppProvider({
     [refresh],
   )
 
+  const deletePlayer = useCallback(
+    async (id: string) => {
+      await api.deletePlayer(id)
+      await refresh()
+    },
+    [refresh],
+  )
+
   const addSeason = useCallback(
     async (name: string) => {
       const trimmed = name.trim()
@@ -189,6 +198,7 @@ export function AppProvider({
       updatePlayer,
       uploadPlayerPhoto,
       removePlayerPhoto,
+      deletePlayer,
       addSeason,
       setActiveSeason: setActiveSeasonId,
       removeSeason,
@@ -206,6 +216,7 @@ export function AppProvider({
       updatePlayer,
       uploadPlayerPhoto,
       removePlayerPhoto,
+      deletePlayer,
       addSeason,
       setActiveSeasonId,
       removeSeason,

@@ -18,6 +18,7 @@ interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>
   register: (username: string, password: string, name: string, playerId?: string) => Promise<void>
   logout: () => void
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -83,9 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = Boolean(user && api.getToken())
 
+  const refreshSession = useCallback(async () => {
+    if (!api.getToken()) return
+    const session = await api.fetchSession()
+    applySession(session, setUser, setPlayer)
+  }, [])
+
   const value = useMemo(
-    () => ({ user, player, loading, isAuthenticated, login, register, logout }),
-    [user, player, loading, isAuthenticated, login, register, logout],
+    () => ({ user, player, loading, isAuthenticated, login, register, logout, refreshSession }),
+    [user, player, loading, isAuthenticated, login, register, logout, refreshSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

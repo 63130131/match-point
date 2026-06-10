@@ -11,7 +11,7 @@ npm run dev
 
 Open http://localhost:5173
 
-Optional: copy `.env.example` to `.env` and set `JWT_SECRET` for local Node API.
+Optional: copy `.env.example` to `.env` and set `JWT_SECRET` and `ADMIN_USERNAME` for local Node API.
 
 ## Deploy to cPanel (`/tenis`)
 
@@ -21,7 +21,7 @@ npm run pack:cpanel
 
 Upload everything inside `deploy/tenis/` to `public_html/tenis/`.
 
-On the server, copy `api/config.example.php` to `api/config.php` and set a strong `JWT_SECRET`.
+On the server, copy `api/config.example.php` to `api/config.php` and set a strong `JWT_SECRET` plus your `ADMIN_USERNAME`.
 
 Set folder permissions: `data/` and `uploads/` → **755** or **775**.
 
@@ -29,8 +29,15 @@ Set folder permissions: `data/` and `uploads/` → **755** or **775**.
 
 - **Sign in required** — nobody can use the app without an account
 - **Create account** — pick a username + password and a display name
-- **Profile edits** — you can only change **your own** name and photo
+- **Profile edits** — everyone can change **their own** name and photo
+- **Admin** — one account (set via `ADMIN_USERNAME`) can edit or remove **other** players; regular users cannot remove anyone, including themselves
 - **Matches & seasons** — any signed-in user can log matches
+
+### Make yourself admin
+
+Local: in `.env` set `ADMIN_USERNAME` to your login username, restart `npm run dev`, then sign out and back in.
+
+Production: in `api/config.php` add `putenv('ADMIN_USERNAME=yourusername');` then sign out and back in.
 
 ### First-time setup for your group
 

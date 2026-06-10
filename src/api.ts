@@ -115,6 +115,10 @@ export async function removePlayerPhoto(id: string): Promise<Player> {
   return request<Player>(`/players/${id}/photo`, { method: 'DELETE' })
 }
 
+export async function deletePlayer(id: string): Promise<void> {
+  return request<void>(`/players/${id}`, { method: 'DELETE' })
+}
+
 export async function createSeason(name: string): Promise<Season> {
   return request<Season>('/seasons', {
     method: 'POST',

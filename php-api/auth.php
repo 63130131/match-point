@@ -74,14 +74,42 @@ function verify_password(string $password, string $hash): bool
     return password_verify($password, $hash);
 }
 
+function admin_username(): string
+{
+    return trim(getenv('ADMIN_USERNAME') ?: '');
+}
+
+function is_configured_admin(string $username): bool
+{
+    $admin = admin_username();
+    return $admin !== '' && strcasecmp($admin, $username) === 0;
+}
+
+function format_user(array $row): array
+{
+    $row['isAdmin'] = !empty($row['isAdmin']);
+    return $row;
+}
+
 function get_user(string $id): ?array
 {
     $stmt = db()->prepare(
-        'SELECT id, username, player_id AS playerId, created_at AS createdAt FROM users WHERE id = :id'
+        'SELECT id, username, player_id AS playerId, is_admin AS isAdmin, created_at AS createdAt FROM users WHERE id = :id'
     );
     $stmt->bindValue(':id', $id, SQLITE3_TEXT);
     $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
-    return $row ?: null;
+    return $row ? format_user($row) : null;
+}
+
+function promote_admin_if_configured(string $userId, string $username): ?array
+{
+    if (!is_configured_admin($username)) {
+        return get_user($userId);
+    }
+    $stmt = db()->prepare('UPDATE users SET is_admin = 1 WHERE id = :id');
+    $stmt->bindValue(':id', $userId, SQLITE3_TEXT);
+    $stmt->execute();
+    return get_user($userId);
 }
 
 function get_user_by_username(string $username): ?array
@@ -112,10 +140,29 @@ function require_auth(): array
     return $user;
 }
 
+function can_edit_player(array $user, string $playerId): bool
+{
+    if (($user['playerId'] ?? null) === $playerId) {
+        return true;
+    }
+    return !empty($user['isAdmin']);
+}
+
 function assert_owns_player(array $user, string $playerId): void
 {
-    if ($user['playerId'] !== $playerId) {
-        respond(403, ['error' => 'You can only edit your own profile']);
+    if (($user['playerId'] ?? null) === $playerId) {
+        return;
+    }
+    if (!empty($user['isAdmin'])) {
+        return;
+    }
+    respond(403, ['error' => 'Only the admin can change other players']);
+}
+
+function assert_admin(array $user): void
+{
+    if (empty($user['isAdmin'])) {
+        respond(403, ['error' => 'Only the admin can remove players']);
     }
 }
 
@@ -145,7 +192,7 @@ function login_user(string $username, string $password): array
     if (!$row || !verify_password($password, $row['password_hash'])) {
         respond(401, ['error' => 'Wrong username or password']);
     }
-    return get_user($row['id']);
+    return promote_admin_if_configured($row['id'], $row['username']);
 }
 
 function register_user(string $username, string $password, string $name, ?string $playerId = null): array
@@ -185,13 +232,15 @@ function register_user(string $username, string $password, string $name, ?string
         $stmt->execute();
     }
 
+    $isAdmin = is_configured_admin($username) ? 1 : 0;
     $stmt = db()->prepare(
-        'INSERT INTO users (id, username, password_hash, player_id, created_at) VALUES (:id, :username, :hash, :pid, :created)'
+        'INSERT INTO users (id, username, password_hash, player_id, is_admin, created_at) VALUES (:id, :username, :hash, :pid, :is_admin, :created)'
     );
     $stmt->bindValue(':id', $userId, SQLITE3_TEXT);
     $stmt->bindValue(':username', $username, SQLITE3_TEXT);
     $stmt->bindValue(':hash', hash_password($password), SQLITE3_TEXT);
     $stmt->bindValue(':pid', $linkedPlayerId, SQLITE3_TEXT);
+    $stmt->bindValue(':is_admin', $isAdmin, SQLITE3_INTEGER);
     $stmt->bindValue(':created', gmdate('c'), SQLITE3_TEXT);
     $stmt->execute();
 

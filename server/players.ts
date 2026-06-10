@@ -46,3 +46,19 @@ export const mimeToExt: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
 }
+
+export function deletePlayerCompletely(playerId: string): boolean {
+  const row = db.prepare('SELECT photo, user_id FROM players WHERE id = ?').get(playerId) as
+    | { photo: string | null; user_id: string | null }
+    | undefined
+  if (!row) return false
+
+  deletePlayerPhotoFile(row.photo)
+  db.prepare('DELETE FROM matches WHERE player1_id = ? OR player2_id = ?').run(playerId, playerId)
+  if (row.user_id) {
+    db.prepare('DELETE FROM users WHERE id = ?').run(row.user_id)
+  }
+  db.prepare('DELETE FROM users WHERE player_id = ?').run(playerId)
+  db.prepare('DELETE FROM players WHERE id = ?').run(playerId)
+  return true
+}

@@ -951,6 +951,13 @@ select option {
   color: var(--text);
 }
 
+.player-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
 .player-list__item--readonly {
   padding: 0.75rem 1rem;
 }

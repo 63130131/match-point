@@ -9,6 +9,7 @@ export interface User {
   id: string
   username: string
   playerId: string | null
+  isAdmin: boolean
   createdAt: string
 }
 
