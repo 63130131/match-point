@@ -1,14 +1,42 @@
-import type { AppData, Match, Player, Season, SetScore } from './types'
+import type { AppData, AuthSession, Match, Player, Season, SetScore } from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
+const TOKEN_KEY = 'tennis-league-token'
+
+let onSessionInvalid: (() => void) | null = null
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token: string | null): void {
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
+}
+
+export function setSessionInvalidHandler(handler: (() => void) | null): void {
+  onSessionInvalid = handler
+}
+
+function invalidateSession(path: string, status: number): void {
+  if (status !== 401) return
+  if (path === '/auth/login' || path === '/auth/register') return
+  logout()
+  onSessionInvalid?.()
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  })
+  const token = getToken()
+  const headers: Record<string, string> = {
+    ...(options?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(options?.headers as Record<string, string>),
+  }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
 
   if (!res.ok) {
+    invalidateSession(path, res.status)
     const body = await res.json().catch(() => ({}))
     throw new Error((body as { error?: string }).error ?? `Request failed (${res.status})`)
   }
@@ -21,15 +49,70 @@ export async function fetchData(): Promise<AppData> {
   return request<AppData>('/data')
 }
 
-export async function createPlayer(name: string): Promise<Player> {
-  return request<Player>('/players', {
+export async function login(username: string, password: string): Promise<AuthSession> {
+  const session = await request<AuthSession>('/auth/login', {
     method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+  setToken(session.token)
+  return session
+}
+
+export async function register(
+  username: string,
+  password: string,
+  name: string,
+  playerId?: string,
+): Promise<AuthSession> {
+  const session = await request<AuthSession>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password, name, playerId }),
+  })
+  setToken(session.token)
+  return session
+}
+
+export async function fetchSession(): Promise<AuthSession> {
+  const session = await request<AuthSession>('/auth/me')
+  setToken(session.token)
+  return session
+}
+
+export async function fetchUnclaimedPlayers(): Promise<Player[]> {
+  const data = await request<{ players: Player[] }>('/auth/unclaimed')
+  return data.players
+}
+
+export function logout(): void {
+  setToken(null)
+}
+
+export async function updatePlayer(id: string, name: string): Promise<Player> {
+  return request<Player>(`/players/${id}`, {
+    method: 'PUT',
     body: JSON.stringify({ name }),
   })
 }
 
-export async function deletePlayer(id: string): Promise<void> {
-  return request<void>(`/players/${id}`, { method: 'DELETE' })
+export async function uploadPlayerPhoto(id: string, file: File): Promise<Player> {
+  const form = new FormData()
+  form.append('photo', file)
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/players/${id}/photo`, {
+    method: 'POST',
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    invalidateSession(`/players/${id}/photo`, res.status)
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error ?? `Request failed (${res.status})`)
+  }
+  return res.json() as Promise<Player>
+}
+
+export async function removePlayerPhoto(id: string): Promise<Player> {
+  return request<Player>(`/players/${id}/photo`, { method: 'DELETE' })
 }
 
 export async function createSeason(name: string): Promise<Season> {

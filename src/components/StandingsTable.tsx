@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext'
 import { computeStandings } from '../utils/match'
 import { BallIcon, TrophyIcon } from './Icons'
+import { PlayerAvatar } from './PlayerAvatar'
 
 function rankLabel(i: number): string {
   if (i === 0) return '1st'
@@ -10,7 +11,7 @@ function rankLabel(i: number): string {
 }
 
 export function StandingsTable() {
-  const { data, seasonMatches, activeSeason } = useApp()
+  const { data, seasonMatches, activeSeason, getPlayer } = useApp()
 
   if (!activeSeason) {
     return (
@@ -75,7 +76,11 @@ export function StandingsTable() {
                 </td>
                 <td className="standings-table__name">
                   <span className="player-chip">
-                    <span className="player-chip__avatar">{row.name.charAt(0).toUpperCase()}</span>
+                    <PlayerAvatar
+                      name={row.name}
+                      photoUrl={getPlayer(row.playerId)?.photoUrl}
+                      size="sm"
+                    />
                     {row.name}
                   </span>
                 </td>

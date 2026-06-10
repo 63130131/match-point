@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { SeasonBar } from './components/SeasonBar'
 import { StandingsTable } from './components/StandingsTable'
 import { MatchForm } from './components/MatchForm'
 import { MatchHistory } from './components/MatchHistory'
 import { PlayerManager } from './components/PlayerManager'
+import { LoginScreen } from './components/LoginScreen'
+import { PlayerAvatar } from './components/PlayerAvatar'
 import { BallIcon, ListIcon, TrophyIcon, UsersIcon } from './components/Icons'
 
 type Tab = 'standings' | 'log' | 'history' | 'players'
@@ -19,6 +22,7 @@ const tabs: { id: Tab; label: string; icon: ReactNode }[] = [
 function AppContent() {
   const [tab, setTab] = useState<Tab>('standings')
   const { loading, error, refresh } = useApp()
+  const { player, user, logout } = useAuth()
 
   if (loading) {
     return (
@@ -56,6 +60,15 @@ function AppContent() {
               <p className="header__tagline">Shared standings for your crew</p>
             </div>
           </div>
+          {player && user && (
+            <div className="header__user">
+              <PlayerAvatar name={player.name} photoUrl={player.photoUrl} size="sm" />
+              <span className="header__user-name">{player.name}</span>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={logout}>
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
         <SeasonBar />
       </header>
@@ -81,15 +94,38 @@ function AppContent() {
         {tab === 'players' && <PlayerManager />}
       </main>
 
-      <footer className="footer">One league for everyone with the link</footer>
+      <footer className="footer">Signed in as {user?.username}</footer>
     </div>
+  )
+}
+
+function AppGate() {
+  const { loading, isAuthenticated, logout } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="loading-screen__ball" />
+          <p>Loading…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) return <LoginScreen />
+
+  return (
+    <AppProvider onUnauthorized={logout}>
+      <AppContent />
+    </AppProvider>
   )
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <AuthProvider>
+      <AppGate />
+    </AuthProvider>
   )
 }

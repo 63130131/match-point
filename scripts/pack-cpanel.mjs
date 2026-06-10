@@ -9,11 +9,15 @@ const out = join(root, 'deploy', SUBPATH)
 rmSync(out, { recursive: true, force: true })
 mkdirSync(join(out, 'api'), { recursive: true })
 mkdirSync(join(out, 'data'), { recursive: true })
+mkdirSync(join(out, 'uploads'), { recursive: true })
 
 cpSync(join(root, 'dist'), out, { recursive: true })
 cpSync(join(root, 'php-api', 'index.php'), join(out, 'api', 'index.php'))
 cpSync(join(root, 'php-api', 'db.php'), join(out, 'api', 'db.php'))
+cpSync(join(root, 'php-api', 'auth.php'), join(out, 'api', 'auth.php'))
+cpSync(join(root, 'php-api', 'config.example.php'), join(out, 'api', 'config.example.php'))
 cpSync(join(root, 'php-api', 'data.htaccess'), join(out, 'data', '.htaccess'))
+cpSync(join(root, 'php-api', 'uploads.htaccess'), join(out, 'uploads', '.htaccess'))
 
 writeFileSync(
   join(out, 'api', '.htaccess'),

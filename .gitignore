@@ -11,12 +11,16 @@ node_modules
 dist
 dist-server
 deploy
+uploads/*
+!uploads/.gitkeep
 dist.zip
 *.zip
 data/*.db
 data/*.db-*
 dist-ssr
 *.local
+.env
+php-api/config.php
 
 # Editor directories and files
 .vscode/*

@@ -2,9 +2,7 @@
 
 Track tennis matches with friends — shared standings, seasons, and match history.
 
-When you **host this online**, everyone who opens your URL sees the same players, matches, and standings. That’s what the server + database is for — not just for your laptop.
-
-## Run locally (while building)
+## Quick start (local)
 
 ```bash
 npm install
@@ -13,43 +11,38 @@ npm run dev
 
 Open http://localhost:5173
 
-## Put it online (share with friends)
+Optional: copy `.env.example` to `.env` and set `JWT_SECRET` for local Node API.
 
-Deploy as **one app** (website + API together). Good options:
-
-| Host | Works? | Notes |
-|------|--------|-------|
-| [Render](https://render.com) | Yes | Easiest — use the included `render.yaml` |
-| Railway, Fly.io | Yes | `npm run build` then `npm start` |
-| Vercel / Netlify only | No* | Static hosts can’t keep a SQLite file |
-
-\*For Vercel/Netlify you’d need a cloud database (e.g. Supabase) instead.
-
-### Deploy on Render (recommended)
-
-1. Push this project to GitHub
-2. Go to [render.com](https://render.com) → **New** → **Blueprint**
-3. Connect the repo — Render reads `render.yaml` automatically
-4. Deploy — you get a URL like `https://tennis-league.onrender.com`
-5. Share that link with friends
-
-The persistent disk keeps your `tennis-league.db` safe across restarts.
-
-### Manual deploy (any Node host)
+## Deploy to cPanel (`/tenis`)
 
 ```bash
-npm run build
-npm start
+npm run pack:cpanel
 ```
 
-Set `PORT` if the host requires it. Optionally set `DATA_DIR` to a persistent folder path.
+Upload everything inside `deploy/tenis/` to `public_html/tenis/`.
 
-## How to use the app
+On the server, copy `api/config.example.php` to `api/config.php` and set a strong `JWT_SECRET`.
 
-1. **Players** — add everyone in your group
-2. **New Season** — e.g. "Summer 2026"
-3. **Log Match** — pick players, enter set scores, save
-4. **Standings** — league table for the active season
-5. **History** — past matches for the season
+Set folder permissions: `data/` and `uploads/` → **755** or **775**.
 
-Anyone with the link can view and log matches (no login yet).
+## Accounts & security
+
+- **Sign in required** — nobody can use the app without an account
+- **Create account** — pick a username + password and a display name
+- **Profile edits** — you can only change **your own** name and photo
+- **Matches & seasons** — any signed-in user can log matches
+
+### First-time setup for your group
+
+1. Deploy the app
+2. Each friend goes to the site → **Create account**
+3. Each person picks their own display name when registering
+
+## How to use
+
+1. **Sign in** or **Create account**
+2. **Players** → edit your own photo & name
+3. **New Season** → e.g. "Summer 2026"
+4. **Log Match** → pick players, enter set scores
+5. **Standings** → season table
+6. **History** → past matches

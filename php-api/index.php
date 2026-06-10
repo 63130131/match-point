@@ -1,11 +1,13 @@
 <?php
 
+require __DIR__ . '/auth.php';
+load_config();
 require __DIR__ . '/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
@@ -29,31 +31,135 @@ try {
     }
 
     if ($path === '/data' && $method === 'GET') {
+        require_auth();
         respond(200, fetch_all_data());
     }
 
+    if ($path === '/auth/login' && $method === 'POST') {
+        $body = json_body();
+        $username = trim((string) ($body['username'] ?? ''));
+        $password = (string) ($body['password'] ?? '');
+        if ($username === '' || $password === '') {
+            respond(400, ['error' => 'Username and password required']);
+        }
+        $user = login_user($username, $password);
+        respond(200, auth_response($user));
+    }
+
+    if ($path === '/auth/register' && $method === 'POST') {
+        $body = json_body();
+        $username = trim((string) ($body['username'] ?? ''));
+        $password = (string) ($body['password'] ?? '');
+        $name = trim((string) ($body['name'] ?? ''));
+        $playerId = ($body['playerId'] ?? null) ? (string) $body['playerId'] : null;
+        $user = register_user($username, $password, $name, $playerId);
+        respond(201, auth_response($user));
+    }
+
+    if ($path === '/auth/me' && $method === 'GET') {
+        $user = require_auth();
+        respond(200, auth_response($user));
+    }
+
+    if ($path === '/auth/unclaimed' && $method === 'GET') {
+        respond(200, ['players' => list_unclaimed_players()]);
+    }
+
     if ($path === '/players' && $method === 'POST') {
+        respond(403, ['error' => 'Use sign in and claim a profile instead']);
+    }
+
+    if (preg_match('#^/players/([^/]+)$#', $path, $m) && $method === 'PUT') {
+        $user = require_auth();
+        $id = $m[1];
+        assert_owns_player($user, $id);
+        $existing = get_player($id);
+        if (!$existing) {
+            respond(404, ['error' => 'Player not found']);
+        }
         $body = json_body();
         $name = trim((string) ($body['name'] ?? ''));
         if ($name === '') {
             respond(400, ['error' => 'Name is required']);
         }
-        $player = ['id' => uid(), 'name' => $name];
-        $stmt = db()->prepare('INSERT INTO players (id, name) VALUES (:id, :name)');
-        $stmt->bindValue(':id', $player['id'], SQLITE3_TEXT);
-        $stmt->bindValue(':name', $player['name'], SQLITE3_TEXT);
+        $stmt = db()->prepare('UPDATE players SET name = :name WHERE id = :id');
+        $stmt->bindValue(':name', $name, SQLITE3_TEXT);
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
         $stmt->execute();
-        respond(201, $player);
+        respond(200, get_player($id));
+    }
+
+    if (preg_match('#^/players/([^/]+)/photo$#', $path, $m) && $method === 'POST') {
+        $user = require_auth();
+        $id = $m[1];
+        assert_owns_player($user, $id);
+        $existing = get_player($id);
+        if (!$existing) {
+            respond(404, ['error' => 'Player not found']);
+        }
+        if (!isset($_FILES['photo']) || $_FILES['photo']['error'] !== UPLOAD_ERR_OK) {
+            respond(400, ['error' => 'Photo upload failed']);
+        }
+        $file = $_FILES['photo'];
+        if ($file['size'] > 2 * 1024 * 1024) {
+            respond(400, ['error' => 'Image must be under 2 MB']);
+        }
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($file['tmp_name']);
+        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+        if (!isset($allowed[$mime])) {
+            respond(400, ['error' => 'Use JPG, PNG, WebP, or GIF']);
+        }
+        $stmt = db()->prepare('SELECT photo FROM players WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+        delete_player_photo_file($row['photo'] ?? null);
+
+        $filename = $id . '.' . $allowed[$mime];
+        if (!move_uploaded_file($file['tmp_name'], uploads_dir() . '/' . $filename)) {
+            respond(500, ['error' => 'Could not save photo']);
+        }
+        $stmt = db()->prepare('UPDATE players SET photo = :photo WHERE id = :id');
+        $stmt->bindValue(':photo', $filename, SQLITE3_TEXT);
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $stmt->execute();
+        respond(200, get_player($id));
+    }
+
+    if (preg_match('#^/players/([^/]+)/photo$#', $path, $m) && $method === 'DELETE') {
+        $user = require_auth();
+        $id = $m[1];
+        assert_owns_player($user, $id);
+        $existing = get_player($id);
+        if (!$existing) {
+            respond(404, ['error' => 'Player not found']);
+        }
+        $stmt = db()->prepare('SELECT photo FROM players WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+        delete_player_photo_file($row['photo'] ?? null);
+        $stmt = db()->prepare('UPDATE players SET photo = NULL WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $stmt->execute();
+        respond(200, get_player($id));
     }
 
     if (preg_match('#^/players/([^/]+)$#', $path, $m) && $method === 'DELETE') {
+        $user = require_auth();
+        $id = $m[1];
+        assert_owns_player($user, $id);
+        $stmt = db()->prepare('SELECT photo FROM players WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
+        $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+        delete_player_photo_file($row['photo'] ?? null);
         $stmt = db()->prepare('DELETE FROM players WHERE id = :id');
-        $stmt->bindValue(':id', $m[1], SQLITE3_TEXT);
+        $stmt->bindValue(':id', $id, SQLITE3_TEXT);
         $stmt->execute();
         respond(204);
     }
 
     if ($path === '/seasons' && $method === 'POST') {
+        require_auth();
         $body = json_body();
         $name = trim((string) ($body['name'] ?? ''));
         if ($name === '') {
@@ -74,6 +180,7 @@ try {
     }
 
     if (preg_match('#^/seasons/([^/]+)$#', $path, $m) && $method === 'DELETE') {
+        require_auth();
         $id = $m[1];
         $stmt = db()->prepare('DELETE FROM seasons WHERE id = :id');
         $stmt->bindValue(':id', $id, SQLITE3_TEXT);
@@ -86,6 +193,7 @@ try {
     }
 
     if ($path === '/active-season' && $method === 'PUT') {
+        require_auth();
         $body = json_body();
         $seasonId = $body['seasonId'] ?? null;
         if ($seasonId) {
@@ -101,6 +209,7 @@ try {
     }
 
     if ($path === '/matches' && $method === 'POST') {
+        require_auth();
         $body = json_body();
         $seasonId = $body['seasonId'] ?? '';
         $player1Id = $body['player1Id'] ?? '';
@@ -142,6 +251,7 @@ try {
     }
 
     if (preg_match('#^/matches/([^/]+)$#', $path, $m) && $method === 'DELETE') {
+        require_auth();
         $stmt = db()->prepare('DELETE FROM matches WHERE id = :id');
         $stmt->bindValue(':id', $m[1], SQLITE3_TEXT);
         $stmt->execute();

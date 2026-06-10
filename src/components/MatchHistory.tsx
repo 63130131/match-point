@@ -1,6 +1,7 @@
 import { useApp } from '../context/AppContext'
 import { formatScore, getMatchWinner } from '../utils/match'
 import { BallIcon, ListIcon } from './Icons'
+import { PlayerAvatar } from './PlayerAvatar'
 
 export function MatchHistory() {
   const { seasonMatches, activeSeason, getPlayer, removeMatch } = useApp()
@@ -76,9 +77,7 @@ export function MatchHistory() {
                   <div
                     className={`match-card__player ${winnerId === match.player1Id ? 'match-card__player--winner' : ''}`}
                   >
-                    <span className="match-card__avatar">
-                      {(p1?.name ?? '?').charAt(0).toUpperCase()}
-                    </span>
+                    <PlayerAvatar name={p1?.name ?? '?'} photoUrl={p1?.photoUrl} size="sm" />
                     <span>{p1?.name ?? 'Unknown'}</span>
                     {winnerId === match.player1Id && <span className="match-card__badge">W</span>}
                   </div>
@@ -86,9 +85,7 @@ export function MatchHistory() {
                   <div
                     className={`match-card__player ${winnerId === match.player2Id ? 'match-card__player--winner' : ''}`}
                   >
-                    <span className="match-card__avatar">
-                      {(p2?.name ?? '?').charAt(0).toUpperCase()}
-                    </span>
+                    <PlayerAvatar name={p2?.name ?? '?'} photoUrl={p2?.photoUrl} size="sm" />
                     <span>{p2?.name ?? 'Unknown'}</span>
                     {winnerId === match.player2Id && <span className="match-card__badge">W</span>}
                   </div>

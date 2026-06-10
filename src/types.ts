@@ -1,6 +1,21 @@
 export interface Player {
   id: string
   name: string
+  photoUrl?: string | null
+  isClaimed?: boolean
+}
+
+export interface User {
+  id: string
+  username: string
+  playerId: string | null
+  createdAt: string
+}
+
+export interface AuthSession {
+  token: string
+  user: User
+  player: Player | null
 }
 
 export interface Season {

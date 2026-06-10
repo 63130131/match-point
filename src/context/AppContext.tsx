@@ -16,8 +16,9 @@ interface AppContextValue {
   seasonMatches: Match[]
   loading: boolean
   error: string | null
-  addPlayer: (name: string) => Promise<void>
-  removePlayer: (id: string) => Promise<void>
+  updatePlayer: (id: string, name: string) => Promise<void>
+  uploadPlayerPhoto: (id: string, file: File) => Promise<void>
+  removePlayerPhoto: (id: string) => Promise<void>
   addSeason: (name: string) => Promise<void>
   setActiveSeason: (id: string) => Promise<void>
   removeSeason: (id: string) => Promise<void>
@@ -42,7 +43,13 @@ const emptyData = (): AppData => ({
   activeSeasonId: null,
 })
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({
+  children,
+  onUnauthorized,
+}: {
+  children: ReactNode
+  onUnauthorized?: () => void
+}) {
   const [data, setData] = useState<AppData>(emptyData)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,9 +60,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setData(next)
       setError(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load data')
+      const message = e instanceof Error ? e.message : 'Failed to load data'
+      if (message === 'Sign in required' || message === 'Invalid session') {
+        onUnauthorized?.()
+        return
+      }
+      setError(message)
     }
-  }, [])
+  }, [onUnauthorized])
 
   useEffect(() => {
     refresh().finally(() => setLoading(false))
@@ -76,19 +88,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [data.matches, data.activeSeasonId],
   )
 
-  const addPlayer = useCallback(
-    async (name: string) => {
-      const trimmed = name.trim()
-      if (!trimmed) return
-      await api.createPlayer(trimmed)
+  const updatePlayer = useCallback(
+    async (id: string, name: string) => {
+      await api.updatePlayer(id, name)
       await refresh()
     },
     [refresh],
   )
 
-  const removePlayer = useCallback(
+  const uploadPlayerPhoto = useCallback(
+    async (id: string, file: File) => {
+      await api.uploadPlayerPhoto(id, file)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const removePlayerPhoto = useCallback(
     async (id: string) => {
-      await api.deletePlayer(id)
+      await api.removePlayerPhoto(id)
       await refresh()
     },
     [refresh],
@@ -168,8 +186,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       seasonMatches,
       loading,
       error,
-      addPlayer,
-      removePlayer,
+      updatePlayer,
+      uploadPlayerPhoto,
+      removePlayerPhoto,
       addSeason,
       setActiveSeason: setActiveSeasonId,
       removeSeason,
@@ -184,8 +203,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       seasonMatches,
       loading,
       error,
-      addPlayer,
-      removePlayer,
+      updatePlayer,
+      uploadPlayerPhoto,
+      removePlayerPhoto,
       addSeason,
       setActiveSeasonId,
       removeSeason,
