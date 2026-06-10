@@ -1,12 +1,5 @@
 import type { Match, PlayerStanding, Player, SetScore } from '../types'
 
-export type SetFormat = 'standard' | 'long'
-
-export const SET_FORMAT_MAX_GAMES: Record<SetFormat, number> = {
-  standard: 7,
-  long: 21,
-}
-
 export function getMatchWinner(match: Match): string | null {
   let p1Sets = 0
   let p2Sets = 0
