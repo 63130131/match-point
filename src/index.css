@@ -1069,6 +1069,20 @@ select option {
   margin: 0 auto 1rem;
 }
 
+.title-settings {
+  margin-bottom: 1rem;
+}
+
+.title-settings__hint {
+  margin-bottom: 1rem;
+}
+
+.title-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .logo-settings {
   margin-bottom: 1rem;
 }

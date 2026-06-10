@@ -252,6 +252,87 @@ function set_active_season_id(?string $id): void
     $stmt->execute();
 }
 
+function get_setting_value(string $key): ?string
+{
+    $stmt = db()->prepare('SELECT value FROM settings WHERE key = :key');
+    $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+    $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    return isset($row['value']) ? (string) $row['value'] : null;
+}
+
+function set_setting_value(string $key, string $value): void
+{
+    $stmt = db()->prepare(
+        'INSERT INTO settings (key, value) VALUES (:key, :value)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    );
+    $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+    $stmt->bindValue(':value', $value, SQLITE3_TEXT);
+    $stmt->execute();
+}
+
+function delete_setting_value(string $key): void
+{
+    $stmt = db()->prepare('DELETE FROM settings WHERE key = :key');
+    $stmt->bindValue(':key', $key, SQLITE3_TEXT);
+    $stmt->execute();
+}
+
+function default_site_title(): string
+{
+    return 'Tennis League';
+}
+
+function default_site_tagline(): string
+{
+    return 'Shared standings for your crew';
+}
+
+function get_site_title(): string
+{
+    $value = trim(get_setting_value('siteTitle') ?? '');
+    return $value !== '' ? $value : default_site_title();
+}
+
+function get_site_tagline(): string
+{
+    $value = trim(get_setting_value('siteTagline') ?? '');
+    return $value !== '' ? $value : default_site_tagline();
+}
+
+function get_branding(): array
+{
+    return [
+        'logoUrl' => get_logo_url(),
+        'title' => get_site_title(),
+        'tagline' => get_site_tagline(),
+    ];
+}
+
+function save_site_branding(string $title, string $tagline): array
+{
+    $title = trim($title);
+    $tagline = trim($tagline);
+    if ($title === '') {
+        respond(400, ['error' => 'Title is required']);
+    }
+    if (strlen($title) > 60) {
+        respond(400, ['error' => 'Title must be 60 characters or less']);
+    }
+    if (strlen($tagline) > 120) {
+        respond(400, ['error' => 'Tagline must be 120 characters or less']);
+    }
+
+    set_setting_value('siteTitle', $title);
+    if ($tagline === '') {
+        delete_setting_value('siteTagline');
+    } else {
+        set_setting_value('siteTagline', $tagline);
+    }
+
+    return get_branding();
+}
+
 function get_logo_url(): ?string
 {
     $stmt = db()->prepare("SELECT value FROM settings WHERE key = 'siteLogo'");

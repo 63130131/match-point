@@ -4,7 +4,12 @@ import db from './db.js'
 import { mimeToExt, uploadsDir } from './players.js'
 
 const LOGO_KEY = 'siteLogo'
+const TITLE_KEY = 'siteTitle'
+const TAGLINE_KEY = 'siteTagline'
 const LOGO_PREFIX = 'site-logo'
+
+export const DEFAULT_SITE_TITLE = 'Tennis League'
+export const DEFAULT_SITE_TAGLINE = 'Shared standings for your crew'
 
 function getSetting(key: string): string | null {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
@@ -58,4 +63,39 @@ export function saveLogo(buffer: Buffer, mime: string): string | null {
 export function removeLogo(): void {
   deleteLogoFiles()
   deleteSetting(LOGO_KEY)
+}
+
+export function getSiteTitle(): string {
+  const value = getSetting(TITLE_KEY)?.trim()
+  return value || DEFAULT_SITE_TITLE
+}
+
+export function getSiteTagline(): string {
+  const value = getSetting(TAGLINE_KEY)?.trim()
+  return value || DEFAULT_SITE_TAGLINE
+}
+
+export function getBranding() {
+  return {
+    logoUrl: getLogoUrl(),
+    title: getSiteTitle(),
+    tagline: getSiteTagline(),
+  }
+}
+
+export function saveSiteBranding(title: string, tagline: string) {
+  const trimmedTitle = title.trim()
+  const trimmedTagline = tagline.trim()
+  if (!trimmedTitle) throw new Error('Title is required')
+  if (trimmedTitle.length > 60) throw new Error('Title must be 60 characters or less')
+  if (trimmedTagline.length > 120) throw new Error('Tagline must be 120 characters or less')
+
+  setSetting(TITLE_KEY, trimmedTitle)
+  if (trimmedTagline) {
+    setSetting(TAGLINE_KEY, trimmedTagline)
+  } else {
+    deleteSetting(TAGLINE_KEY)
+  }
+
+  return getBranding()
 }

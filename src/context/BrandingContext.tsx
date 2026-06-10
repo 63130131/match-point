@@ -8,29 +8,42 @@ import {
   type ReactNode,
 } from 'react'
 import * as api from '../api'
+import { DEFAULT_SITE_TAGLINE, DEFAULT_SITE_TITLE } from '../constants/branding'
 
 interface BrandingContextValue {
   logoUrl: string | null
+  title: string
+  tagline: string
   loading: boolean
-  refreshLogo: () => Promise<void>
+  refreshBranding: () => Promise<void>
   uploadLogo: (file: File) => Promise<void>
   removeLogo: () => Promise<void>
+  updateBranding: (title: string, tagline: string) => Promise<void>
 }
 
 const BrandingContext = createContext<BrandingContextValue | null>(null)
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [title, setTitle] = useState(DEFAULT_SITE_TITLE)
+  const [tagline, setTagline] = useState(DEFAULT_SITE_TAGLINE)
   const [loading, setLoading] = useState(true)
 
-  const refreshLogo = useCallback(async () => {
-    const url = await api.fetchLogo()
-    setLogoUrl(url)
+  const applyBranding = useCallback((branding: api.Branding) => {
+    setLogoUrl(branding.logoUrl)
+    setTitle(branding.title)
+    setTagline(branding.tagline)
+    document.title = branding.title
   }, [])
 
+  const refreshBranding = useCallback(async () => {
+    const branding = await api.fetchBranding()
+    applyBranding(branding)
+  }, [applyBranding])
+
   useEffect(() => {
-    refreshLogo().finally(() => setLoading(false))
-  }, [refreshLogo])
+    refreshBranding().finally(() => setLoading(false))
+  }, [refreshBranding])
 
   const uploadLogo = useCallback(
     async (file: File) => {
@@ -45,9 +58,26 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     setLogoUrl(null)
   }, [])
 
+  const updateBranding = useCallback(
+    async (nextTitle: string, nextTagline: string) => {
+      const branding = await api.updateBranding(nextTitle, nextTagline)
+      applyBranding(branding)
+    },
+    [applyBranding],
+  )
+
   const value = useMemo(
-    () => ({ logoUrl, loading, refreshLogo, uploadLogo, removeLogo }),
-    [logoUrl, loading, refreshLogo, uploadLogo, removeLogo],
+    () => ({
+      logoUrl,
+      title,
+      tagline,
+      loading,
+      refreshBranding,
+      uploadLogo,
+      removeLogo,
+      updateBranding,
+    }),
+    [logoUrl, title, tagline, loading, refreshBranding, uploadLogo, removeLogo, updateBranding],
   )
 
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>

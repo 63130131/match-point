@@ -44,7 +44,7 @@ export function PlayerManager() {
           <h2 className="section-title">Players</h2>
           <p className="section-subtitle">
             {isAdmin
-              ? 'As admin you can edit or remove other players. Change the league logo in Settings.'
+              ? 'As admin you can edit or remove other players. Change league branding in Settings.'
               : 'You can edit your own profile below. Only the admin can change other players.'}
           </p>
         </div>

@@ -30,8 +30,17 @@ try {
         respond(200, ['ok' => true]);
     }
 
-    if ($path === '/logo' && $method === 'GET') {
-        respond(200, ['logoUrl' => get_logo_url()]);
+    if (($path === '/logo' || $path === '/branding') && $method === 'GET') {
+        respond(200, get_branding());
+    }
+
+    if ($path === '/settings/branding' && $method === 'PUT') {
+        $user = require_auth();
+        assert_admin($user);
+        $body = json_body();
+        $title = trim((string) ($body['title'] ?? ''));
+        $tagline = trim((string) ($body['tagline'] ?? ''));
+        respond(200, save_site_branding($title, $tagline));
     }
 
     if ($path === '/settings/logo' && $method === 'POST') {

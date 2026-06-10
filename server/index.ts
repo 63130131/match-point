@@ -16,7 +16,7 @@ import {
   registerUser,
   requireAuth,
 } from './auth.js'
-import { getLogoUrl, removeLogo, saveLogo } from './branding.js'
+import { getBranding, getLogoUrl, removeLogo, saveLogo, saveSiteBranding } from './branding.js'
 import {
   deletePlayerCompletely,
   deletePlayerPhotoFile,
@@ -67,7 +67,24 @@ app.get('/api/health', (_req, res) => {
 })
 
 app.get('/api/logo', (_req, res) => {
-  res.json({ logoUrl: getLogoUrl() })
+  res.json(getBranding())
+})
+
+app.get('/api/branding', (_req, res) => {
+  res.json(getBranding())
+})
+
+app.put('/api/settings/branding', (req, res) => {
+  const user = requireAuth(req, res)
+  if (!user) return
+  if (!assertAdmin(user, res)) return
+  const title = String(req.body?.title ?? '')
+  const tagline = String(req.body?.tagline ?? '')
+  try {
+    res.json(saveSiteBranding(title, tagline))
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid branding' })
+  }
 })
 
 app.post('/api/settings/logo', upload.single('logo'), (req, res) => {

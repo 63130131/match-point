@@ -1,4 +1,5 @@
 import { LogoSettings } from './LogoSettings'
+import { TitleSettings } from './TitleSettings'
 
 export function AdminSettings() {
   return (
@@ -10,6 +11,7 @@ export function AdminSettings() {
         </div>
         <span className="pill pill--accent">Admin</span>
       </div>
+      <TitleSettings />
       <LogoSettings />
     </div>
   )

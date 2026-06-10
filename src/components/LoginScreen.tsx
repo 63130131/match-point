@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { LeagueLogo } from './LeagueLogo'
+import { useBranding } from '../context/BrandingContext'
 
 type Mode = 'login' | 'register'
 
 export function LoginScreen() {
   const { login, register } = useAuth()
+  const { title, tagline } = useBranding()
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -39,8 +41,8 @@ export function LoginScreen() {
           <div className="header__mark auth-screen__logo">
             <LeagueLogo />
           </div>
-          <h1 className="auth-screen__title">Tennis League</h1>
-          <p className="auth-screen__subtitle">Sign in to view and manage the league</p>
+          <h1 className="auth-screen__title">{title}</h1>
+          <p className="auth-screen__subtitle">{tagline}</p>
 
           <div className="auth-tabs">
             <button

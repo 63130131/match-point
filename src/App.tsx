@@ -11,7 +11,7 @@ import { LoginScreen } from './components/LoginScreen'
 import { LeagueLogo } from './components/LeagueLogo'
 import { PlayerAvatar } from './components/PlayerAvatar'
 import { BallIcon, ListIcon, SettingsIcon, TrophyIcon, UsersIcon } from './components/Icons'
-import { BrandingProvider } from './context/BrandingContext'
+import { BrandingProvider, useBranding } from './context/BrandingContext'
 
 type Tab = 'standings' | 'log' | 'history' | 'players' | 'settings'
 
@@ -28,6 +28,7 @@ function AppContent() {
   const { loading, error, refresh } = useApp()
   const { player, user, logout, refreshSession } = useAuth()
   const isAdmin = Boolean(user?.isAdmin)
+  const { title, tagline } = useBranding()
   const tabs = baseTabs.filter((t) => !t.adminOnly || isAdmin)
 
   if (loading) {
@@ -62,8 +63,8 @@ function AppContent() {
               <LeagueLogo />
             </div>
             <div>
-              <h1 className="header__title">Tennis League</h1>
-              <p className="header__tagline">Shared standings for your crew</p>
+              <h1 className="header__title">{title}</h1>
+              <p className="header__tagline">{tagline}</p>
             </div>
           </div>
           {player && user && (
