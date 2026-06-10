@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { BallIcon } from './Icons'
+import { LeagueLogo } from './LeagueLogo'
 
 type Mode = 'login' | 'register'
 
@@ -37,7 +37,7 @@ export function LoginScreen() {
       <div className="auth-screen">
         <div className="auth-screen__card auth-screen__card--wide">
           <div className="header__mark auth-screen__logo">
-            <BallIcon />
+            <LeagueLogo />
           </div>
           <h1 className="auth-screen__title">Tennis League</h1>
           <p className="auth-screen__subtitle">Sign in to view and manage the league</p>

@@ -252,6 +252,57 @@ function set_active_season_id(?string $id): void
     $stmt->execute();
 }
 
+function get_logo_url(): ?string
+{
+    $stmt = db()->prepare("SELECT value FROM settings WHERE key = 'siteLogo'");
+    $row = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
+    $filename = $row['value'] ?? null;
+    if (!$filename) {
+        return null;
+    }
+    $path = uploads_dir() . '/' . $filename;
+    if (!is_file($path)) {
+        return null;
+    }
+    $v = filemtime($path);
+    return public_base() . '/uploads/' . $filename . '?v=' . $v;
+}
+
+function delete_logo_files(): void
+{
+    foreach (glob(uploads_dir() . '/site-logo.*') ?: [] as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+}
+
+function save_logo(string $tmpPath, string $mime): ?string
+{
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif', 'image/svg+xml' => 'svg'];
+    if (!isset($allowed[$mime])) {
+        return null;
+    }
+    delete_logo_files();
+    $filename = 'site-logo.' . $allowed[$mime];
+    if (!copy($tmpPath, uploads_dir() . '/' . $filename)) {
+        return null;
+    }
+    $stmt = db()->prepare(
+        "INSERT INTO settings (key, value) VALUES ('siteLogo', :value)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+    );
+    $stmt->bindValue(':value', $filename, SQLITE3_TEXT);
+    $stmt->execute();
+    return get_logo_url();
+}
+
+function remove_logo(): void
+{
+    delete_logo_files();
+    db()->exec("DELETE FROM settings WHERE key = 'siteLogo'");
+}
+
 function fetch_all_data(): array
 {
     $db = db();

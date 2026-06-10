@@ -143,9 +143,28 @@ body {
   box-shadow: 0 0 24px var(--accent-glow);
 }
 
-.header__mark svg {
+.header__mark svg,
+.league-logo {
   width: 1.35rem;
   height: 1.35rem;
+}
+
+.header__mark .league-logo,
+.auth-screen__logo .league-logo,
+.logo-settings__preview .league-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
+.header__mark:has(.league-logo),
+.auth-screen__logo:has(.league-logo),
+.logo-settings__preview:has(.league-logo) {
+  background: var(--surface-solid);
+  color: inherit;
+  box-shadow: none;
+  padding: 0.2rem;
 }
 
 .header__title {
@@ -1026,6 +1045,44 @@ select option {
 
 .auth-screen__logo {
   margin: 0 auto 1rem;
+}
+
+.logo-settings {
+  margin-bottom: 1rem;
+}
+
+.logo-settings__hint {
+  margin-bottom: 1rem;
+}
+
+.logo-settings__row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-settings__preview {
+  flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
+.logo-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .auth-screen__title {

@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import type { Player } from '../types'
 import { PlayerAvatar } from './PlayerAvatar'
+import { LogoSettings } from './LogoSettings'
 import { PlayerEditModal } from './PlayerEditModal'
 
 export function PlayerManager() {
@@ -50,6 +51,8 @@ export function PlayerManager() {
         </div>
         {data.players.length > 0 && <span className="pill">{data.players.length} total</span>}
       </div>
+
+      {isAdmin && <LogoSettings />}
 
       {myProfile && (
         <div className="card my-profile">

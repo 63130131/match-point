@@ -15,6 +15,7 @@ import {
   registerUser,
   requireAuth,
 } from './auth.js'
+import { getLogoUrl, removeLogo, saveLogo } from './branding.js'
 import {
   deletePlayerCompletely,
   deletePlayerPhotoFile,
@@ -61,7 +62,35 @@ function setActiveSeasonId(id: string | null): void {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true })
+  res.json({ ok: true, version: 2 })
+})
+
+app.get('/api/logo', (_req, res) => {
+  res.json({ logoUrl: getLogoUrl() })
+})
+
+app.post('/api/settings/logo', upload.single('logo'), (req, res) => {
+  const user = requireAuth(req, res)
+  if (!user) return
+  if (!assertAdmin(user, res)) return
+  if (!req.file) {
+    res.status(400).json({ error: 'Logo upload failed' })
+    return
+  }
+  const logoUrl = saveLogo(req.file.buffer, req.file.mimetype)
+  if (!logoUrl) {
+    res.status(400).json({ error: 'Use JPG, PNG, WebP, GIF, or SVG' })
+    return
+  }
+  res.json({ logoUrl })
+})
+
+app.delete('/api/settings/logo', (req, res) => {
+  const user = requireAuth(req, res)
+  if (!user) return
+  if (!assertAdmin(user, res)) return
+  removeLogo()
+  res.status(204).end()
 })
 
 app.get('/api/data', (req, res) => {

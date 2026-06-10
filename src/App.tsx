@@ -7,8 +7,10 @@ import { MatchForm } from './components/MatchForm'
 import { MatchHistory } from './components/MatchHistory'
 import { PlayerManager } from './components/PlayerManager'
 import { LoginScreen } from './components/LoginScreen'
+import { LeagueLogo } from './components/LeagueLogo'
 import { PlayerAvatar } from './components/PlayerAvatar'
 import { BallIcon, ListIcon, TrophyIcon, UsersIcon } from './components/Icons'
+import { BrandingProvider } from './context/BrandingContext'
 
 type Tab = 'standings' | 'log' | 'history' | 'players'
 
@@ -53,7 +55,7 @@ function AppContent() {
         <div className="header__top">
           <div className="header__brand">
             <div className="header__mark">
-              <BallIcon />
+              <LeagueLogo />
             </div>
             <div>
               <h1 className="header__title">Tennis League</h1>
@@ -124,8 +126,10 @@ function AppGate() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppGate />
-    </AuthProvider>
+    <BrandingProvider>
+      <AuthProvider>
+        <AppGate />
+      </AuthProvider>
+    </BrandingProvider>
   )
 }

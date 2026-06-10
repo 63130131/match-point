@@ -45,6 +45,35 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export async function fetchLogo(): Promise<string | null> {
+  const res = await fetch(`${API_BASE}/logo`)
+  if (!res.ok) return null
+  const data = (await res.json()) as { logoUrl?: string | null }
+  return data.logoUrl ?? null
+}
+
+export async function uploadLogo(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('logo', file)
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/settings/logo`, {
+    method: 'POST',
+    body: form,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    invalidateSession('/settings/logo', res.status)
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { error?: string }).error ?? `Request failed (${res.status})`)
+  }
+  const data = (await res.json()) as { logoUrl: string }
+  return data.logoUrl
+}
+
+export async function removeLogo(): Promise<void> {
+  return request<void>('/settings/logo', { method: 'DELETE' })
+}
+
 export async function fetchData(): Promise<AppData> {
   return request<AppData>('/data')
 }

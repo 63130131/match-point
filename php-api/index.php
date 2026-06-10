@@ -30,6 +30,36 @@ try {
         respond(200, ['ok' => true]);
     }
 
+    if ($path === '/logo' && $method === 'GET') {
+        respond(200, ['logoUrl' => get_logo_url()]);
+    }
+
+    if ($path === '/settings/logo' && $method === 'POST') {
+        $user = require_auth();
+        assert_admin($user);
+        if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
+            respond(400, ['error' => 'Logo upload failed']);
+        }
+        $file = $_FILES['logo'];
+        if ($file['size'] > 2 * 1024 * 1024) {
+            respond(400, ['error' => 'Image must be under 2 MB']);
+        }
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($file['tmp_name']);
+        $logoUrl = save_logo($file['tmp_name'], $mime);
+        if (!$logoUrl) {
+            respond(400, ['error' => 'Use JPG, PNG, WebP, GIF, or SVG']);
+        }
+        respond(200, ['logoUrl' => $logoUrl]);
+    }
+
+    if ($path === '/settings/logo' && $method === 'DELETE') {
+        $user = require_auth();
+        assert_admin($user);
+        remove_logo();
+        respond(204);
+    }
+
     if ($path === '/data' && $method === 'GET') {
         require_auth();
         respond(200, fetch_all_data());
